@@ -1,43 +1,65 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pasang Asisten Rekon</title>
+<title>Asisten Rekon Bank</title>
 <style>
-:root{--bg:#f2f4f2;--card:#fff;--ink:#17201c;--muted:#5a6761;--line:#d9e0dc;--accent:#1d5c4f}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-.wrap{max-width:720px;margin:0 auto;padding:32px 20px 60px}
-h1{font-size:22px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 24px}
+:root{--bg:#f2f4f2;--card:#fff;--ink:#17201c;--muted:#5a6761;--line:#d9e0dc;--accent:#1d5c4f;--ok:#1f9d55;--warn:#c98400;--bad:#d64541}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:32px 20px 60px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 24px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:16px}
-ol{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+ol,ul{margin:6px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
 .bm{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:24px;cursor:grab;box-shadow:0 4px 14px rgba(0,0,0,.15)}
 .drop{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:14px 0 6px}
 .muted{color:var(--muted);font-size:13px}
 kbd{background:#eef1ef;border:1px solid var(--line);border-radius:4px;padding:1px 6px;font:12px ui-monospace,Menlo,monospace}
-.ok{background:#ddf0e3;border-color:#bfe0c9}
+.tag{display:inline-block;color:#fff;font-weight:700;font-size:12px;padding:1px 9px;border-radius:10px;white-space:nowrap}
+td:first-child{white-space:nowrap;width:1%}
+.g{background:var(--ok)}.y{background:var(--warn)}.r{background:var(--bad)}
+table{border-collapse:collapse;width:100%;font-size:14px}td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
+.tbl{overflow-x:auto}
+.alert{background:#fff4e0;border-color:#f0d7a6}
 </style></head><body><div class="wrap">
-<h1>Pasang Asisten Rekon</h1>
-<p class="sub">Untuk tim accounting. Tanpa ekstensi, cukup satu bookmark di Chrome. Bookmark ini selalu memuat versi terbaru, jadi tidak perlu dipasang ulang saat ada pembaruan.</p>
+<h1>Asisten Rekon Bank</h1>
+<p class="sub">Untuk tim accounting. Asisten muncul di halaman Kas &amp; Bank &gt; Rekonsiliasi Bank Accurate, mencocokkan mutasi bank dengan jurnal, dan mencentang "Ada di Rekening Koran" untuk pasangan yang pasti, setelah Anda setujui.</p>
 
-<div class="card"><b>1. Tampilkan bookmark bar</b>
-<p class="muted">Tekan <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> (Windows: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>).</p></div>
-
-<div class="card"><b>2. Seret tombol ini ke bookmark bar</b>
+<div class="card"><h2>1. Pasang (sekali per laptop)</h2>
+<ol>
+<li>Tampilkan bookmark bar: <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> (Windows: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>).</li>
+<li>Seret tombol di bawah ke bookmark bar. Bookmark ini selalu memuat versi terbaru, tidak perlu dipasang ulang.</li>
+</ol>
 <div class="drop"><a class="bm" href="javascript:(function(){if(window.__AR_ON__){var b=document.getElementById('ar-launch');if(b)b.click();return;}var s=document.createElement('script');s.src='https://momiasi-finance.github.io/asisten-rekon/asisten-rekon.js?t='+Date.now();s.onerror=function(){alert('Asisten Rekon gagal dimuat. Cek koneksi internet, lalu coba lagi.');};document.head.appendChild(s);})();void 0" onclick="alert('Jangan diklik di sini. Seret (drag) tombol ini ke bookmark bar, lalu klik bookmark-nya saat berada di halaman Rekonsiliasi Bank Accurate.');return false;">Asisten Rekon</a>
 <span class="muted">← tahan, lalu seret ke bookmark bar</span></div></div>
 
-<div class="card ok"><b>3. Cara pakai setiap kali rekon</b>
+<div class="card"><h2>2. Rekon mingguan (per rekening)</h2>
 <ol>
-<li>Buka Accurate &gt; Kas &amp; Bank &gt; <b>Rekonsiliasi Bank</b>, pilih rekening dan tanggal, klik refresh biru.</li>
-<li>Klik bookmark <b>Asisten Rekon</b>. Panel muncul di kanan bawah, nomor versinya tertulis di judul panel.</li>
-<li>Klik <b>Pilih file mutasi bank</b> (CSV/Excel dari KlikBCA Bisnis / BNIDirect), lalu isi tanggal <b>Rekon mingguan terakhir</b>.</li>
-<li>Kartu hijau = pasti, kuning = cek dulu, merah putus-putus = belum ada di bank.</li>
-<li>Kartu hijau dicentang dari daftar <b>Siap dicentang</b> di panel: klik <b>Centang di Accurate</b>, klik sekali lagi untuk yakin, lalu pilih Ya/OK di dialog Accurate. Kartu kuning diperiksa dulu, lalu klik sendiri di Accurate bila benar.</li>
-<li>Setelah semua beres, majukan tanggal <b>Rekon mingguan terakhir</b> ke tanggal akhir mutasi yang baru direkon.</li>
-</ol>
-<p class="muted">Asisten hanya membaca layar dan file mutasi di laptop ini, dan hanya menekan tombol "Ada di Rekening Koran" yang Anda setujui. Tidak ada data yang dikirim ke mana pun.</p></div>
+<li><b>Unduh mutasi</b> dari internet banking (KlikBCA Bisnis / BNIDirect) dalam CSV atau Excel, untuk hari-hari <b>sejak rekon terakhir</b>.</li>
+<li>Buka Accurate &gt; Kas &amp; Bank &gt; <b>Rekonsiliasi Bank</b>. Pilih rekening. Tanggal awal: <b>mundur</b> (mis. 1 Januari) agar jurnal lama yang belum cair ikut tampil. Tanggal akhir: <b>sama dengan tanggal terakhir di file mutasi</b>. Klik refresh biru.</li>
+<li>Kalau ada versi baru, <b>refresh tab Accurate</b> (<kbd>Cmd</kbd> + <kbd>R</kbd>) dulu. Lalu klik bookmark <b>Asisten Rekon</b>. Nomor versi tertulis di judul panel.</li>
+<li>Kalau panel menulis "x dari y kartu", klik <b>Muat semua kartu</b>.</li>
+<li>Klik <b>Pilih file mutasi bank</b>. Pastikan baris "No. rekening di file" bertanda <b>✓ sama</b> dan tidak ada peringatan kuning di atas daftar.</li>
+<li>Isi <b>Rekon mingguan terakhir s.d.</b> dengan tanggal terakhir yang sudah direkon sebelumnya (hanya perlu kalau file mencakup hari yang sudah direkon).</li>
+<li>Kerjakan sesuai warna:
+  <div class="tbl"><table>
+  <tr><td><span class="tag g">✓ PASTI</span></td><td>Nominal, tanggal, dan berita transfer cocok. Klik <b>Centang di Accurate</b> di panel, klik sekali lagi untuk yakin. Klik pertama di sesi ini memunculkan konfirmasi Accurate: pilih Ya/OK.</td></tr>
+  <tr><td><span class="tag y">? CEK</span></td><td>Ada keraguan (nominal kembar, berita berbeda, transfer gabungan, bagian dari payroll). Bandingkan berita transfer di panel dengan keterangan jurnal. Kalau benar, klik <b>Ada di Rekening Koran</b> sendiri di Accurate.</td></tr>
+  <tr><td><span class="tag r">✕ BELUM DI BANK</span></td><td>Jurnal belum ada di mutasi. Biarkan (cek/transfer belum cair). Kalau sudah lama, telusuri.</td></tr>
+  <tr><td><b>Hanya di bank</b></td><td>Ada di mutasi tapi belum dijurnal (biaya admin, bunga, transfer masuk). Buat jurnalnya di Accurate sesuai usulan, lalu klik <b>Baca ulang Accurate</b>.</td></tr>
+  </table></div></li>
+<li>Cek bagian <b>Rekonsiliasi</b> di panel: selisih harus 0 atau bisa dijelaskan.</li>
+<li>Klik <b>Unduh kertas kerja (CSV)</b> untuk arsip, lalu majukan tanggal <b>Rekon mingguan terakhir</b> ke tanggal akhir file.</li>
+</ol></div>
 
-<div class="card"><b>Salah centang?</b>
-<p class="muted">Buka Accurate &gt; Kas &amp; Bank &gt; <b>Histori Bank</b>, pilih rekeningnya, cari no. bukti jurnal itu, lalu klik tanda ✓ di kolom <b>#</b> untuk membatalkan. Kembali ke Rekonsiliasi Bank dan klik <b>Lupakan</b> di panel asisten supaya mutasinya dicocokkan ulang.</p></div>
+<div class="card"><h2>Salah centang?</h2>
+<p>Buka Kas &amp; Bank &gt; <b>Histori Bank</b>, pilih rekeningnya, cari no. bukti jurnal itu, klik tanda ✓ di kolom <b>#</b>. Saat kembali ke Rekonsiliasi Bank, asisten mendeteksi pembatalannya sendiri.</p></div>
 
-<div class="card"><b>Ada versi baru?</b>
-<p class="muted">Bookmark tidak perlu dipasang ulang. Cukup <b>refresh tab Accurate</b> (<kbd>Cmd</kbd> + <kbd>R</kbd>) sebelum klik bookmark. Versi yang sedang dipakai tertulis di judul panel.</p></div>
+<div class="card alert"><h2>Aturan penting</h2>
+<ul>
+<li><b>Satu rekening, satu PIC per minggu.</b> Ingatan asisten (tanggal rekon terakhir, mutasi yang sudah dipakai) tersimpan di browser laptop masing-masing, tidak dibagi antar laptop.</li>
+<li><b>Jangan memetakan rekening ke SmartLink e-Banking.</b> Kalau dipetakan, tombol "Ada di Rekening Koran" di Accurate berubah dan asisten tidak bisa membantu.</li>
+<li><b>Jangan mencentang manual sebagian lalu menjalankan asisten</b> untuk hari yang sama: mutasi untuk jurnal yang sudah dicentang akan terbaca "hanya di bank".</li>
+<li>Kalau asisten <b>berhenti</b> dengan pesan merah, jangan dipaksa. Periksa kartunya, klik <b>Baca ulang Accurate</b>, atau laporkan ke penanggung jawab asisten dengan tombol <b>Salin hasil</b>.</li>
+<li>Asisten hanya membaca layar dan file mutasi di laptop ini, dan hanya menekan "Ada di Rekening Koran" yang Anda setujui. Tidak ada data yang dikirim ke mana pun.</li>
+</ul></div>
 </div></body></html>
