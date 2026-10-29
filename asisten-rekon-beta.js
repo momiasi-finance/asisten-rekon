@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.3.1-beta';
+const VERSION = '1.3.2-beta';
 // Fase 3 ("Centang semua hijau") hanya aktif di versi beta sampai disetujui untuk tim.
 const BATCH = true;
 let ackAll = false;
@@ -191,7 +191,7 @@ function parseBank(rows, defYear){
 }
 
 /* ---------- pencocokan ---------- */
-const STOP = /^(TRSF|E-BANKING|BANKING|BANK|PEMBAYARAN|PENERIMAAN|BAYAR|TRANSFER|SETORAN|DARI|UNTUK|KEPADA|FTSCY|SWITCHING|KLIRING|JURNAL|UMUM|UTANG|PIUTANG|BEBAN|BIAYA|ADMIN|ADMINISTRASI|PAYMENT|FULL|CAMPAIGN|MARKETING|LAINNYA|INFLUENCER|INDONESIA|TRANSAKSI|ONLINE|JANUARI|FEBRUARI|MARET|APRIL|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|PELUNASAN|\d{1,4})$/;
+const STOP = /^(TRSF|E-BANKING|BANKING|BANK|PEMBAYARAN|PENERIMAAN|BAYAR|TRANSFER|SETORAN|DARI|UNTUK|KEPADA|FTSCY|SWITCHING|KLIRING|JURNAL|UMUM|UTANG|PIUTANG|BEBAN|BIAYA|ADMIN|ADMINISTRASI|PAYMENT|FULL|CAMPAIGN|MARKETING|LAINNYA|INFLUENCER|INDONESIA|TRANSAKSI|ONLINE|KORSET|RORO|JONGGRANG|JONGGRAN|MATERNITY|NURSING|WEAR|OWNING|KONTEN|KONTE|AFFILIATE|REWARD|STREAMING|LIVE|PROJECT|JANUARI|FEBRUARI|MARET|APRIL|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|PELUNASAN|\d{1,4})$/;
 function tokens(s){ return (String(s).toUpperCase().match(/[A-Z0-9][A-Z0-9\-]{3,}/g) || []).filter(t => !STOP.test(t)); }
 // Berita transfer = keterangan mutasi tanpa kode teknis bank (jenis transaksi, kode cabang/terminal,
 // nomor referensi, nominal). Contoh: "TRSF E-BANKING DB - 2610/FTSCY/WS95321 BCA2610261435 DP Ranis" -> "DP RANIS".
@@ -214,7 +214,7 @@ const KEEP = /^(GAJI|PAYROLL|BPJS|PAJAK|PPH|PLN|LISTRIK|SEWA|LAZADA|SHOPEE|TOKOP
 function buildGeneric(bank, book){
   const df = docs => { const m = new Map(); docs.forEach(d => new Set(tokens(d)).forEach(t => m.set(t, (m.get(t) || 0) + 1))); return m; };
   const kb = df(book.map(k => k.desc)), bb = df(bank.map(b => berita(b.desc)));
-  const limK = Math.max(3, book.length * 0.15), limB = Math.max(5, bank.length * 0.05);
+  const limK = Math.max(2, book.length * 0.1), limB = Math.max(5, bank.length * 0.03);
   GENERIC = new Set();
   kb.forEach((n, t) => { if (n > limK && !KEEP.test(t)) GENERIC.add(t); });
   bb.forEach((n, t) => { if (n > limB && !KEEP.test(t)) GENERIC.add(t); });
