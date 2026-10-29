@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.1.2';
+const VERSION = '1.1.3';
 const DAY = 86400000;
 const MONTHS = {jan:1,feb:2,peb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,ags:8,aug:8,sep:9,okt:10,oct:10,nov:11,nop:11,des:12,dec:12};
 const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -399,6 +399,7 @@ async function tickCard(i){
     const entry = {waktu: new Date().toISOString(), rekening: acc.acct, noBukti: k.ref, tanggal: fd(k.date), nominal: fmt(k.amt), keterangan: k.desc.slice(0, 80),
       mutasiBank: g.b.map(b => `${fd(b.date)} ${fmt(b.amt)} ${b.desc.slice(0, 60)}`).join(' + ')};
     if (!entry.noBukti) entry.noBukti = k.desc.slice(0, 30);
+    entry.sigs = g.b.map(b => b.sig);
     sessionLog.push(entry); addLog(entry); addUsed(g.b);
     setTimeout(run, 1200);
   } else {
@@ -458,6 +459,14 @@ function run(){
   // Rekening di layar diganti tapi file mutasinya masih rekening lain: jangan cocokkan apa pun.
   const accDigits = (acc.acct.match(/\d{6,}/) || [''])[0];
   if (bankData.acctNo && accDigits && bankData.acctNo !== accDigits) { result = null; clearMarks(); render(); return; }
+  // Kartu yang pernah dicentang asisten tapi muncul lagi di layar berarti centangnya dibatalkan
+  // (mis. lewat Histori Bank): tandai di riwayat dan lepaskan mutasinya supaya dicocokkan ulang.
+  const onScreen = new Set(acc.recs.map(k => k.ref).filter(Boolean));
+  const undone = sessionLog.filter(e => !e.batal && e.noBukti && onScreen.has(e.noBukti));
+  if (undone.length) {
+    undone.forEach(e => { e.batal = true; addLog({...e, waktu: new Date().toISOString(), catatan: 'dibatalkan di Accurate'}); });
+    try { const s = getUsed(); undone.forEach(e => (e.sigs || []).forEach(x => s.delete(x))); localStorage.setItem(usedKey(), JSON.stringify([...s])); } catch (e) {}
+  }
   const usedSet = getUsed();
   const fresh = bankData.recs.filter(b => !usedSet.has(b.sig));
   result = classify(fresh, acc.recs, cutTs());
@@ -511,8 +520,10 @@ function render(){
         ${g.b.map(b => `<div class="rl"><span>Bank ${fd(b.date)} · ${esc(b.desc.slice(0, 48))}</span><span class="n">${fmt(b.amt)}</span></div>`).join('')}
         <div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div>
         <div class="row" style="justify-content:flex-end;margin-top:4px">${k.btn ? `<button data-tick="${i}" ${live ? '' : 'disabled'} style="${live ? '' : 'opacity:.5'}">${armed === i ? `Yakin centang ${esc(k.ref || '')} ${fmt(k.amt)}?` : (busy ? 'Menunggu Accurate…' : 'Centang di Accurate')}</button>` : '<small class="warn">Tombol Accurate tidak ditemukan untuk kartu ini</small>'}</div></div>`; }).join('')}</div>`;
-    if (sessionLog.length) body += `<div><h4>Sudah dicentang sesi ini (${sessionLog.length})</h4>${sessionLog.map(e => `<div class="rl"><span>✓ ${esc(e.noBukti)} · ${esc(e.tanggal)}</span><span class="n">${esc(e.nominal)}</span></div>`).join('')}
-      <div class="note" style="margin-top:6px">Salah centang? Buka Kas &amp; Bank → <b>Histori Bank</b>, cari no. bukti di atas, klik tanda ✓ di kolom # untuk membatalkan. Setelah itu klik <b>Lupakan</b> di panel ini.</div></div>`;
+    if (sessionLog.length) body += `<div><h4>Sudah dicentang sesi ini (${sessionLog.filter(e => !e.batal).length})</h4>${sessionLog.map(e => e.batal
+        ? `<div class="rl" style="color:#8d5a0c"><span>↩ <s>${esc(e.noBukti)}</s> · dibatalkan di Accurate</span><span class="n"><s>${esc(e.nominal)}</s></span></div>`
+        : `<div class="rl"><span>✓ ${esc(e.noBukti)} · ${esc(e.tanggal)}</span><span class="n">${esc(e.nominal)}</span></div>`).join('')}
+      <div class="note" style="margin-top:6px">Salah centang? Buka Kas &amp; Bank → <b>Histori Bank</b>, cari no. bukti di atas, klik tanda ✓ di kolom # untuk membatalkan. Saat kembali ke sini, asisten mendeteksi pembatalannya sendiri.</div></div>`;
     if (r.saran.length) body += `<div><h4>Saran untuk dicek (${r.saran.length})</h4>${r.saran.map((g, i) => item(g, i, 's')).join('')}</div>`;
     if (r.bankOnly.length) body += `<div><h4>Hanya di mutasi bank (${r.bankOnly.length}): perlu jurnal di Accurate</h4>${r.bankOnly.map(b => `<div class="it"><div class="rl"><span>${fd(b.date)} · ${esc(b.desc.slice(0, 50))}</span><span class="n">${fmt(b.amt)}</span></div><small>Usulan: ${esc(guessCat(b))}</small></div>`).join('')}</div>`;
     if (bankData.close != null && a.saldo != null) {
@@ -575,7 +586,7 @@ function pickFile(){
 function copyResult(){
   const r = result, a = acc, L = [];
   L.push(`ASISTEN REKON v${VERSION} · ${a.acct} · ${a.dateFrom}-${a.dateTo} · file ${bankData.name}`);
-  if (sessionLog.length) { L.push('--- SUDAH DICENTANG SESI INI'); sessionLog.forEach(e => L.push(`  ${e.noBukti} ${e.tanggal} ${e.nominal} <- ${e.mutasiBank}`)); }
+  if (sessionLog.length) { L.push('--- SUDAH DICENTANG SESI INI'); sessionLog.forEach(e => L.push(`  ${e.batal ? '[DIBATALKAN] ' : ''}${e.noBukti} ${e.tanggal} ${e.nominal} <- ${e.mutasiBank}`)); }
   if (halted) L.push('--- BERHENTI: ' + halted);
   L.push(`Kartu ${a.recs.length}/${a.pending} · saldo buku ${fmt(a.saldo)} · saldo bank ${fmt(bankData.open)} -> ${fmt(bankData.close)} · no rek file ${bankData.acctNo}`);
   L.push(`PASTI ${r.pasti.length} · SARAN ${r.saran.length} · HANYA BANK ${r.bankOnly.length} · HANYA ACCURATE ${r.bookOnly.length} · SUDAH DIREKON SEBELUMNYA ${r.bankOld.length} (s.d. ${getCut() || '-'})`);
