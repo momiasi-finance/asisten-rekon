@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.1.1-beta';
+const VERSION = '1.1.2-beta';
 const DAY = 86400000;
 const MONTHS = {jan:1,feb:2,peb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,ags:8,aug:8,sep:9,okt:10,oct:10,nov:11,nop:11,des:12,dec:12};
 const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -332,15 +332,15 @@ function readAccurate(){
     const am = al.match(/^\((Cr|Dr)\)\s*([\d.,]+)$/i), v = parseAmount(am[2]).v;
     const isRef = l => !/\s/.test(l) && /\d/.test(l) && /[.\-\/]/.test(l) && l !== dl && l.length < 40;
     // Nomor bukti (mis. JV.2026.10.86783) ada di baris bawah, di luar kotak kartu.
-    const outer = card.parentElement && card.parentElement.querySelectorAll('.panelreconcilenotmatche').length === 1
-      ? card.parentElement.innerText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+    const box = card.parentElement && card.parentElement.querySelectorAll('.panelreconcilenotmatche').length === 1 ? card.parentElement : card;
+    const outer = box.innerText.split('\n').map(s => s.trim()).filter(Boolean);
     const ref = [...lines].reverse().find(isRef) || [...outer].reverse().find(isRef) || '';
     const desc = lines.filter(l => l !== dl && l !== al && l !== ref).join(' · ');
     let row = card, guard = 0;
     while (row.parentElement && guard++ < 10 && !row.querySelector('button[name="btnAddStatement"]')) row = row.parentElement;
     const btn = row.querySelector('button[name="btnAddStatement"]');
     const own = btn && row.querySelectorAll('.panelreconcilenotmatche').length === 1;
-    recs.push({id:'k' + i, side:'book', card, btn: own ? btn : null, date: parseDate(dl, 2000, 'dmy'), amt: /dr/i.test(am[1]) ? v : -v, desc, ref});
+    recs.push({id:'k' + i, side:'book', card, box, btn: own ? btn : null, date: parseDate(dl, 2000, 'dmy'), amt: /dr/i.test(am[1]) ? v : -v, desc, ref});
   });
   const txt = root.innerText;
   const sm = txt.match(/Saldo\s+Rp\s*(-?[\d.,]+)/i);
@@ -386,7 +386,8 @@ async function tickCard(i){
   const k = g.k[0];
   // Periksa ulang tepat sebelum klik: kartu & tombolnya masih yang sama dan isinya tidak berubah.
   if (!k.card.isConnected || !k.btn || !k.btn.isConnected || k.btn.offsetParent === null) { halted = 'Kartu sudah berubah di layar. Klik "Baca ulang Accurate" dulu.'; render(); return; }
-  const txt = k.card.innerText;
+  // Kartu + baris nomor bukti di bawahnya (nomor bukti berada di luar kotak kartu).
+  const txt = (k.box && k.box.isConnected ? k.box : k.card).innerText;
   const amtTxt = (Math.abs(k.amt) / 100).toLocaleString('id-ID', {maximumFractionDigits:2});
   if ((k.ref && !txt.includes(k.ref)) || !txt.replace(/\s/g, '').includes(amtTxt.replace(/\s/g, ''))) { halted = 'Isi kartu tidak sama dengan saat dicocokkan. Klik "Baca ulang Accurate" dulu.'; render(); return; }
   busy = true; render();
@@ -497,7 +498,7 @@ function render(){
     body += `<div class="tiles"><div class="tile t-ok">Pasti<b>${nP}</b></div><div class="tile t-sr">Saran<b>${nS}</b></div><div class="tile t-b">Hanya bank<b>${r.bankOnly.length}</b></div><div class="tile">Hanya Accurate<b>${r.bookOnly.length}</b></div></div>
       <div class="note">Kartu hijau = pasangan pasti, bisa dicentang dari daftar di bawah (satu per satu). Kuning = saran: periksa, lalu klik sendiri di Accurate bila benar. Merah putus-putus = belum ada di bank, biarkan.</div>
       ${halted ? `<div class="note bad">${esc(halted)}</div>` : ''}
-      ${r.preUsed ? `<div class="note">${r.preUsed} mutasi bank sudah dipakai untuk mencentang lewat asisten, jadi tidak dicocokkan lagi.</div>` : ''}
+      ${r.preUsed ? `<div class="note">${r.preUsed} mutasi bank sudah dipakai untuk mencentang lewat asisten, jadi tidak dicocokkan lagi. Kalau centangnya dibatalkan di Accurate, klik <button class="q" id="ar-forget" style="padding:1px 6px">Lupakan</button> supaya mutasinya dicocokkan ulang.</div>` : ''}
       ${r.bankOld.length ? `<div class="note">${r.bankOld.length} mutasi s.d. ${esc(getCut())} tidak punya pasangan di layar dan dianggap <b>sudah direkon sebelumnya</b>, jadi tidak dihitung.</div>`
         : (!getCut() && r.bankOnly.length > 30 ? `<div class="note warn">Banyak mutasi "hanya bank". Kalau tim sudah rekon mingguan, isi tanggal <b>Rekon mingguan terakhir s.d.</b> di atas.</div>` : '')}`;
     const item = (g, i, kind) => `<div class="it" data-go="${kind}:${i}"><small>${esc(g.why)}</small>
@@ -531,6 +532,7 @@ function render(){
   const on = (id, fn) => { const e = p.querySelector('#' + id); if (e) e.onclick = fn; };
   on('ar-close', () => { clearMarks(); p.remove(); });
   on('ar-reload', () => { halted = ''; run(); });
+  on('ar-forget', () => { try { localStorage.removeItem(usedKey()); } catch (e) {} run(); });
   on('ar-file', pickFile);
   on('ar-copy', copyResult);
   p.querySelectorAll('[data-tick]').forEach(el => el.onclick = () => {
