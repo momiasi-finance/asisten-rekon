@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.2.2';
+const VERSION = '1.2.3';
 // Fase 3 ("Centang semua hijau") hanya aktif di versi beta sampai disetujui untuk tim.
 const BATCH = false;
 let ackAll = false;
@@ -322,24 +322,29 @@ function classify(bank, book, cutoff){
     saran.push({b:[s], k:f, why});
   }
   // 1 jurnal dibayar beberapa kali: semua mutasinya harus menyebut nama yang sama dengan jurnal.
+  // Pengecualian: setoran penjualan yang masuk lewat beberapa settlement EDC/QRIS (berita "MID ...").
+  const isEdc = b => b.amt > 0 && /\bMID\b|KARTU KREDIT|QRIS/i.test(b.desc);
   [ub, uk] = left();
   for (const k of uk.slice().sort((a, b) => Math.abs(b.amt) - Math.abs(a.amt))) {
     if (used.has(k.id)) continue;
-    const base = flat(ub).filter(b => !used.has(b.id) && Math.sign(b.amt) === Math.sign(k.amt) && Math.abs(b.amt) < Math.abs(k.amt) && Math.abs(b.date - k.date) <= tol && nameScore(b, k) > 0);
-    const f = base.length >= 2 ? subset(base, k.amt, 6, 60000) : null;
+    const near = flat(ub).filter(b => !used.has(b.id) && Math.sign(b.amt) === Math.sign(k.amt) && Math.abs(b.amt) < Math.abs(k.amt) && Math.abs(b.date - k.date) <= tol);
+    const named = near.filter(b => nameScore(b, k) > 0), edc = k.amt > 0 ? near.filter(isEdc) : [];
+    let f = named.length >= 2 ? subset(named, k.amt, 6, 60000) : null, why = 'nama mirip';
+    if (!f && edc.length >= 2) { f = subset(edc, k.amt, 14, 150000); why = 'setoran EDC/QRIS'; }
     if (!f) continue;
     f.forEach(x => used.add(x.id)); used.add(k.id);
-    saran.push({b:f, k:[k], why:`1 jurnal dibayar ${f.length}× di bank · nama mirip`});
+    saran.push({b:f, k:[k], why: why === 'nama mirip' ? `1 jurnal dibayar ${f.length}× di bank · nama mirip` : `1 jurnal = ${f.length} setoran EDC/QRIS di bank`});
   }
   // Bagian dari transfer massal (mis. payroll): jurnal bernama sama dengan mutasi yang lebih besar, ±1 hari.
-  // Sisa nominal mutasi itu dianggap milik jurnal yang sudah dicentang sebelumnya.
+  // Sisa nominal mutasi TIDAK diasumsikan beres: dihitung sebagai pos rekonsiliasi sampai terbukti sudah dijurnal.
   [ub, uk] = left();
   for (const b of flat(ub).filter(x => !used.has(x.id)).sort((x, y) => Math.abs(y.amt) - Math.abs(x.amt))) {
     const ks = uk.filter(k => !used.has(k.id) && Math.sign(k.amt) === Math.sign(b.amt) && Math.abs(k.amt) < Math.abs(b.amt) && Math.abs(k.date - b.date) <= DAY && nameScore(b, k) > 0);
     const tot = ks.reduce((s, k) => s + Math.abs(k.amt), 0);
     if (!ks.length || tot > Math.abs(b.amt)) continue;
     used.add(b.id); ks.forEach(k => used.add(k.id));
-    saran.push({b:[b], k:ks, partial:true, why:`Bagian dari transfer massal ${fmt(b.amt)} (sisa ${fmt(Math.sign(b.amt) * (Math.abs(b.amt) - tot))} kemungkinan sudah dicentang sebelumnya)`});
+    const rem = Math.sign(b.amt) * (Math.abs(b.amt) - tot);
+    saran.push({b:[b], k:ks, partial:true, rem, why:`Bagian dari transfer massal ${fmt(b.amt)} · sisa ${fmt(rem)} belum terlihat jurnalnya: pastikan sudah dijurnal (bisa jadi tercatat di rekening lain)`});
   }
   // Nominal sama tapi tanggal lebih jauh (s.d. 14 hari).
   for (const p of pairs.filter(p => !p.b.bundle).sort((x, y) => x.dd - y.dd)) {
@@ -351,7 +356,8 @@ function classify(bank, book, cutoff){
   }
   const rest = bank.filter(b => !used.has(b.id));
   const isOld = b => cutoff != null && b.date <= cutoff;
-  return {pasti, saran, bankOnly: rest.filter(b => !isOld(b)), bankOld: rest.filter(isOld), bookOnly: book.filter(k => !used.has(k.id))};
+  const massRem = saran.filter(g => g.partial).reduce((s, g) => s + g.rem, 0);
+  return {pasti, saran, massRem, bankOnly: rest.filter(b => !isOld(b)), bankOld: rest.filter(isOld), bookOnly: book.filter(k => !used.has(k.id))};
 }
 function guessCat(r){
   const s = (r.desc + ' ' + r.ref).toUpperCase();
@@ -661,13 +667,14 @@ function render(){
     if (r.bookOnly.length) body += `<div><h4>Belum ada di mutasi bank (${r.bookOnly.length}): biarkan</h4>${r.bookOnly.map((k, i) => `<div class="it" data-go="n:${i}" title="Klik untuk menampilkan kartunya di Accurate"><div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div></div>`).join('')}</div>`;
     if (r.bankOnly.length) body += `<div><h4>Hanya di mutasi bank (${r.bankOnly.length}): perlu jurnal di Accurate</h4>${r.bankOnly.map(b => `<div class="it">${bankLine(b)}<small>Usulan: ${esc(guessCat(b))}</small></div>`).join('')}</div>`;
     if (bankData.close != null && a.saldo != null) {
-      const adjB = bankData.close + sum(r.bookOnly), adjK = a.saldo + sum(r.bankOnly), diff = adjB - adjK;
+      const adjB = bankData.close + sum(r.bookOnly), adjK = a.saldo + sum(r.bankOnly) + (r.massRem || 0), diff = adjB - adjK;
       body += `<div><h4>Rekonsiliasi (dengan asumsi semua saran benar)</h4>
         <div class="rl"><span>Saldo bank (file)</span><span class="n">${fmt(bankData.close)}</span></div>
         <div class="rl"><span>+/− pos belum di bank (${r.bookOnly.length})</span><span class="n">${fmt(sum(r.bookOnly))}</span></div>
         <div class="rl t"><span>Bank disesuaikan</span><span class="n">${fmt(adjB)}</span></div>
         <div class="rl"><span>Saldo buku (Accurate)</span><span class="n">${fmt(a.saldo)}</span></div>
         <div class="rl"><span>+/− pos hanya di bank (${r.bankOnly.length})</span><span class="n">${fmt(sum(r.bankOnly))}</span></div>
+        ${r.massRem ? `<div class="rl"><span>+/− sisa transfer massal belum terlihat jurnalnya</span><span class="n">${fmt(r.massRem)}</span></div>` : ''}
         <div class="rl t"><span>Buku disesuaikan</span><span class="n">${fmt(adjK)}</span></div>
         <div class="rl t"><span>Selisih</span><span class="n ${diff === 0 ? 'ok' : 'bad'}">${diff === 0 ? 'Seimbang · 0,00' : fmt(diff)}</span></div>
         ${diff === 0 ? '' : `<div class="note">Selisih biasanya berarti: file mutasi memuat hari yang sudah direkon sebelumnya (jurnalnya sudah dicentang sehingga tidak tampil di layar), tanggal akhir di Accurate berbeda dengan tanggal akhir file, atau tanggal awal di Accurate kurang mundur sehingga pos lama tidak tampil.</div>`}</div>`;
@@ -746,10 +753,12 @@ function exportCsv(){
   r.bookOnly.forEach(k => rows.push(['BELUM DI BANK', 'Jurnal belum ada di mutasi bank', dt(k.date), k.ref, k.desc, num(k.amt), '', '', '']));
   r.bankOnly.forEach(b => rows.push(['HANYA DI BANK', 'Usulan: ' + guessCat(b), '', '', '', '', dt(b.date), b.desc, num(b.amt)]));
   if (bankData.close != null && ac.saldo != null) {
-    const adjB = bankData.close + sum(r.bookOnly), adjK = ac.saldo + sum(r.bankOnly);
+    const adjB = bankData.close + sum(r.bookOnly), adjK = ac.saldo + sum(r.bankOnly) + (r.massRem || 0);
     rows.push([]); rows.push(['Rekonsiliasi (dengan asumsi semua saran benar)']);
     rows.push(['Saldo bank (file)', num(bankData.close)]); rows.push(['+/- pos belum di bank', num(sum(r.bookOnly))]); rows.push(['Bank disesuaikan', num(adjB)]);
-    rows.push(['Saldo buku (Accurate)', num(ac.saldo)]); rows.push(['+/- pos hanya di bank', num(sum(r.bankOnly))]); rows.push(['Buku disesuaikan', num(adjK)]);
+    rows.push(['Saldo buku (Accurate)', num(ac.saldo)]); rows.push(['+/- pos hanya di bank', num(sum(r.bankOnly))]);
+    if (r.massRem) rows.push(['+/- sisa transfer massal belum terlihat jurnalnya', num(r.massRem)]);
+    rows.push(['Buku disesuaikan', num(adjK)]);
     rows.push(['Selisih', num(adjB - adjK)]);
   }
   rows.push([]); rows.push(['Riwayat centang lewat asisten untuk rekening ini (tersimpan di browser ini)']);
