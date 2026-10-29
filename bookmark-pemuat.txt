@@ -1,0 +1,1 @@
+javascript:(function(){if(window.__AR_ON__){var b=document.getElementById('ar-launch');if(b)b.click();return;}var s=document.createElement('script');s.src='https://momiasi-finance.github.io/asisten-rekon/asisten-rekon.js?t='+Date.now();s.onerror=function(){alert('Asisten Rekon gagal dimuat. Cek koneksi internet, lalu coba lagi.');};document.head.appendChild(s);})();void 0

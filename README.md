@@ -25,7 +25,16 @@ Halaman pemasangan untuk tim: https://momiasi-finance.github.io/asisten-rekon/
 ## Aturan pencocokan
 
 - **Hijau (pasti)**: nominal sama persis, tanggal ±3 hari, tidak ada kandidat lain, **dan** berita transfer menyebut nama/kata khas yang sama dengan keterangan jurnal (atau mutasi tanpa berita, mis. pembayaran VA). Nominal kembar boleh hijau bila hanya satu pasangan yang namanya cocok. Transfer BI-FAST + biaya 2.500 ke penerima yang sama dihitung sebagai satu.
-- **Kuning (cek)**: nominal kembar, berita berbeda, transfer gabungan, bagian dari transfer massal (payroll/BPJS), atau beda tanggal hingga 14 hari. Diputuskan manusia.
+- **Kuning (cek)**: nominal kembar, berita berbeda, transfer gabungan, setoran EDC/QRIS gabungan (berita "MID …"), bagian dari transfer massal (payroll/BPJS), atau beda tanggal hingga 14 hari. Diputuskan manusia.
+- Sisa nominal transfer massal yang tidak terlihat jurnalnya **tidak** dianggap beres: dihitung sebagai pos rekonsiliasi tersendiri sampai jurnalnya ditemukan.
+- Mutasi s.d. tanggal "Rekon mingguan terakhir" yang tidak punya pasangan di layar dianggap sudah direkon sebelumnya.
+
+## Versi
+
+| Versi | Isi |
+|---|---|
+| 1.2.3 (resmi) | Centang satu per satu, Muat semua kartu, cek rentang tanggal, kertas kerja CSV, berita transfer sebagai syarat hijau, deteksi pembatalan, setoran EDC/QRIS, sisa transfer massal dihitung. |
+| 1.3.3-beta | Sama dengan 1.2.3 + "Centang semua hijau". Belum diuji di Accurate sungguhan; uji dulu di satu rekening sebelum dipindahkan ke versi resmi (ubah `BATCH = false` menjadi `true` di `asisten-rekon.js`). |
 - Kata yang muncul di banyak transaksi bulan itu (mis. *Korset, Roro, Maternity, KOL*) tidak dihitung sebagai bukti kecocokan.
 
 ## Cara memperbarui
