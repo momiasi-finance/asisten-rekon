@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.3.0-beta';
+const VERSION = '1.3.1-beta';
 // Fase 3 ("Centang semua hijau") hanya aktif di versi beta sampai disetujui untuk tim.
 const BATCH = true;
 let ackAll = false;
@@ -732,7 +732,8 @@ function exportCsv(){
   if (!result || !acc || !bankData) return;
   const r = result, ac = acc, rows = [];
   const num = c => c == null ? '' : (c / 100).toFixed(2);
-  const dt = t => { const d = new Date(t); return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth() + 1).padStart(2,'0')}/${d.getUTCFullYear()}`; };
+  // Format tahun-bulan-hari: dibaca benar oleh Excel di setelan Indonesia maupun Amerika.
+  const dt = t => new Date(t).toISOString().slice(0, 10);
   rows.push([`Kertas kerja rekonsiliasi bank · Asisten Rekon v${VERSION}`]);
   rows.push(['Rekening', ac.acct]); rows.push(['Periode di Accurate', `${ac.dateFrom} s/d ${ac.dateTo}`]);
   rows.push(['File mutasi', bankData.name]); rows.push(['Rekon mingguan terakhir s.d.', getCut() || '-']); rows.push(['Dibuat', new Date().toLocaleString('id-ID')]);
