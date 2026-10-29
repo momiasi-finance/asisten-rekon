@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.1.3';
+const VERSION = '1.1.4';
 const DAY = 86400000;
 const MONTHS = {jan:1,feb:2,peb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,ags:8,aug:8,sep:9,okt:10,oct:10,nov:11,nop:11,des:12,dec:12};
 const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -435,23 +435,35 @@ function css(){
   #ar-panel .it small{color:#5a6761} #ar-panel .n{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
   #ar-panel .rl{display:flex;justify-content:space-between;gap:8px;padding:2px 0} #ar-panel .rl.t{border-top:1px solid #17201c;font-weight:700;margin-top:2px}
   #ar-panel .note{background:#f2f4f2;border-radius:6px;padding:8px;color:#4a5751;font-size:12px}
-  .ar-ok{outline:3px solid #2f9a5c !important;outline-offset:-3px}
-  .ar-sr{outline:3px solid #e0a020 !important;outline-offset:-3px}
-  .ar-no{outline:3px dashed #c0453d !important;outline-offset:-3px}
-  .ar-ok::after,.ar-sr::after,.ar-no::after{content:attr(data-ar);display:block;margin:6px 0 0;padding:4px 8px;border-radius:4px;font-size:11.5px;font-weight:600}
-  .ar-ok::after{background:#ddf0e3;color:#1f6b40} .ar-sr::after{background:#fbefcf;color:#7a5208} .ar-no::after{background:#f7e1df;color:#9a2f28}
+  .ar-ok,.ar-sr,.ar-no{position:relative !important;border-radius:6px}
+  .ar-ok{box-shadow:0 0 0 4px #1f9d55, inset 10px 0 0 #1f9d55 !important}
+  .ar-sr{box-shadow:0 0 0 4px #f0a500, inset 10px 0 0 #f0a500 !important}
+  .ar-no{box-shadow:0 0 0 4px #d64541, inset 10px 0 0 #d64541 !important}
+  .ar-ok{background-color:#cdf3d9 !important} .ar-sr{background-color:#ffeab3 !important} .ar-no{background-color:#fcdcda !important}
+  .ar-ok *,.ar-sr *,.ar-no *{background-color:transparent !important}
+  .ar-ok::after,.ar-sr::after,.ar-no::after{content:attr(data-ar);position:absolute;right:10px;bottom:8px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:4px 12px;border-radius:14px;font:700 12.5px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;color:#fff;z-index:3;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .ar-ok::after{background:#1f9d55} .ar-sr::after{background:#c98400} .ar-no::after{background:#d64541}
   #ar-launch{position:fixed;right:16px;bottom:16px;z-index:99999;border:0;border-radius:22px;padding:10px 16px;background:#1d5c4f;color:#fff;font:600 13px system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.2);cursor:pointer}
-  .ar-flash{animation:arf 1.2s 2}@keyframes arf{50%{box-shadow:0 0 0 6px #e0a02088}}`;
+  .ar-flash{animation:arf .7s 4}@keyframes arf{50%{box-shadow:0 0 0 12px rgba(29,92,79,.55) !important}}`;
   document.head.appendChild(st);
 }
 function clearMarks(){ document.querySelectorAll('.ar-ok,.ar-sr,.ar-no').forEach(e => { e.classList.remove('ar-ok','ar-sr','ar-no'); e.removeAttribute('data-ar'); }); }
 function mark(){
   clearMarks(); if (!result) return;
-  const tag = (k, cls, text) => { k.card.classList.add(cls); k.card.setAttribute('data-ar', text); };
-  const bt = g => g.b.map(b => `${fd(b.date)} ${b.desc.slice(0, 45)}`).join(' + ');
-  result.pasti.forEach(g => g.k.forEach(k => tag(k, 'ar-ok', `✓ PASTI · bank: ${bt(g)}`)));
-  result.saran.forEach(g => g.k.forEach(k => tag(k, 'ar-sr', `? SARAN · ${g.why} · bank: ${bt(g)}`)));
-  result.bookOnly.forEach(k => tag(k, 'ar-no', '✕ Belum ada di mutasi bank: biarkan'));
+  // Ditandai di kotak luar (kartu + baris no. bukti) supaya bingkai dan label tidak terpotong.
+  const tag = (k, cls, text) => { const t = target(k); t.classList.add(cls); t.setAttribute('data-ar', text); };
+  result.pasti.forEach(g => g.k.forEach(k => tag(k, 'ar-ok', `✓ PASTI · bank ${fd(g.b[0].date)}`)));
+  result.saran.forEach(g => g.k.forEach(k => tag(k, 'ar-sr', `? CEK · ${g.why}`)));
+  result.bookOnly.forEach(k => tag(k, 'ar-no', '✕ BELUM DI BANK'));
+}
+const target = k => (k.box && k.box.isConnected ? k.box : k.card);
+// Gulir ke kartu di daftar Accurate dan buat berkedip.
+function goTo(k){
+  if (!k) return;
+  const t = target(k); if (!t || !t.isConnected) return;
+  t.scrollIntoView({block:'center', behavior:'smooth'});
+  t.classList.remove('ar-flash'); void t.offsetWidth; t.classList.add('ar-flash');
+  setTimeout(() => t.classList.remove('ar-flash'), 3000);
 }
 function run(){
   acc = readAccurate();
@@ -516,7 +528,7 @@ function render(){
     if (r.pasti.length) body += `<div><h4>Siap dicentang · pasti (${r.pasti.length})</h4>
       <div class="note">Klik <b>Centang</b>, lalu klik sekali lagi untuk yakin. Klik pertama di sesi ini memunculkan konfirmasi dari Accurate: pilih Ya/OK di sana.</div>
       ${r.pasti.map((g, i) => { const k = g.k[0], live = !busy && !halted;
-        return `<div class="it" style="cursor:default"><small>${esc(g.why)}</small>
+        return `<div class="it" data-go="p:${i}" title="Klik untuk menampilkan kartunya di Accurate"><small>${esc(g.why)} · klik untuk lihat kartu</small>
         ${g.b.map(b => `<div class="rl"><span>Bank ${fd(b.date)} · ${esc(b.desc.slice(0, 48))}</span><span class="n">${fmt(b.amt)}</span></div>`).join('')}
         <div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div>
         <div class="row" style="justify-content:flex-end;margin-top:4px">${k.btn ? `<button data-tick="${i}" ${live ? '' : 'disabled'} style="${live ? '' : 'opacity:.5'}">${armed === i ? `Yakin centang ${esc(k.ref || '')} ${fmt(k.amt)}?` : (busy ? 'Menunggu Accurate…' : 'Centang di Accurate')}</button>` : '<small class="warn">Tombol Accurate tidak ditemukan untuk kartu ini</small>'}</div></div>`; }).join('')}</div>`;
@@ -525,6 +537,7 @@ function render(){
         : `<div class="rl"><span>✓ ${esc(e.noBukti)} · ${esc(e.tanggal)}</span><span class="n">${esc(e.nominal)}</span></div>`).join('')}
       <div class="note" style="margin-top:6px">Salah centang? Buka Kas &amp; Bank → <b>Histori Bank</b>, cari no. bukti di atas, klik tanda ✓ di kolom # untuk membatalkan. Saat kembali ke sini, asisten mendeteksi pembatalannya sendiri.</div></div>`;
     if (r.saran.length) body += `<div><h4>Saran untuk dicek (${r.saran.length})</h4>${r.saran.map((g, i) => item(g, i, 's')).join('')}</div>`;
+    if (r.bookOnly.length) body += `<div><h4>Belum ada di mutasi bank (${r.bookOnly.length}): biarkan</h4>${r.bookOnly.map((k, i) => `<div class="it" data-go="n:${i}" title="Klik untuk menampilkan kartunya di Accurate"><div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div></div>`).join('')}</div>`;
     if (r.bankOnly.length) body += `<div><h4>Hanya di mutasi bank (${r.bankOnly.length}): perlu jurnal di Accurate</h4>${r.bankOnly.map(b => `<div class="it"><div class="rl"><span>${fd(b.date)} · ${esc(b.desc.slice(0, 50))}</span><span class="n">${fmt(b.amt)}</span></div><small>Usulan: ${esc(guessCat(b))}</small></div>`).join('')}</div>`;
     if (bankData.close != null && a.saldo != null) {
       const adjB = bankData.close + sum(r.bookOnly), adjK = a.saldo + sum(r.bankOnly), diff = adjB - adjK;
@@ -547,15 +560,17 @@ function render(){
   on('ar-forget', () => { try { localStorage.removeItem(usedKey()); } catch (e) {} run(); });
   on('ar-file', pickFile);
   on('ar-copy', copyResult);
-  p.querySelectorAll('[data-tick]').forEach(el => el.onclick = () => {
+  p.querySelectorAll('[data-tick]').forEach(el => el.onclick = ev => {
+    ev.stopPropagation();
     const i = +el.dataset.tick;
-    if (armed !== i) { armed = i; clearTimeout(armTimer); armTimer = setTimeout(() => { armed = -1; render(); }, 5000); render(); return; }
+    if (armed !== i) { armed = i; clearTimeout(armTimer); armTimer = setTimeout(() => { armed = -1; render(); }, 5000); render(); goTo(result.pasti[i] && result.pasti[i].k[0]); return; }
     armed = -1; clearTimeout(armTimer); tickCard(i);
   });
   const cutIn = p.querySelector('#ar-cut'); if (cutIn) cutIn.onchange = () => { setCut(cutIn.value); run(); };
   p.querySelectorAll('[data-go]').forEach(el => el.onclick = () => {
-    const [kind, i] = el.dataset.go.split(':'); const g = result.saran[+i]; if (!g) return;
-    const c = g.k[0].card; c.scrollIntoView({block:'center', behavior:'smooth'}); c.classList.add('ar-flash'); setTimeout(() => c.classList.remove('ar-flash'), 2600);
+    const [kind, i] = el.dataset.go.split(':');
+    const k = kind === 's' ? (result.saran[+i] || {k:[]}).k[0] : kind === 'p' ? (result.pasti[+i] || {k:[]}).k[0] : result.bookOnly[+i];
+    goTo(k);
   });
 }
 function pickFile(){
