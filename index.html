@@ -34,7 +34,7 @@ table{border-collapse:collapse;width:100%;font-size:14px}td{border-top:1px solid
 
 <div class="card"><h2>2. Rekon mingguan (per rekening)</h2>
 <ol>
-<li><b>Unduh mutasi</b> dari internet banking (KlikBCA Bisnis / BNIDirect) dalam CSV atau Excel, untuk hari-hari <b>sejak rekon terakhir</b>.</li>
+<li>Lihat <b>catatan bersama</b>: rekening ini terakhir direkon s.d. tanggal berapa. <b>Unduh mutasi</b> dari internet banking (KlikBCA Bisnis / BNIDirect) dalam CSV atau Excel, mulai hari setelah tanggal itu.</li>
 <li>Buka Accurate &gt; Kas &amp; Bank &gt; <b>Rekonsiliasi Bank</b>. Pilih rekening. Tanggal awal: <b>mundur</b> (mis. 1 Januari) agar jurnal lama yang belum cair ikut tampil. Tanggal akhir: <b>sama dengan tanggal terakhir di file mutasi</b>. Klik refresh biru.</li>
 <li>Kalau ada versi baru, <b>refresh tab Accurate</b> (<kbd>Cmd</kbd> + <kbd>R</kbd>) dulu. Lalu klik bookmark <b>Asisten Rekon</b>. Nomor versi tertulis di judul panel.</li>
 <li>Kalau panel menulis "x dari y kartu", klik <b>Muat semua kartu</b>.</li>
@@ -48,7 +48,7 @@ table{border-collapse:collapse;width:100%;font-size:14px}td{border-top:1px solid
   <tr><td><b>Hanya di bank</b></td><td>Ada di mutasi tapi belum dijurnal (biaya admin, bunga, transfer masuk). Buat jurnalnya di Accurate sesuai usulan, lalu klik <b>Baca ulang Accurate</b>.</td></tr>
   </table></div></li>
 <li>Cek bagian <b>Rekonsiliasi</b> di panel: selisih harus 0 atau bisa dijelaskan.</li>
-<li>Klik <b>Unduh kertas kerja (CSV)</b> untuk arsip, lalu majukan tanggal <b>Rekon mingguan terakhir</b> ke tanggal akhir file.</li>
+<li>Klik <b>Unduh kertas kerja (CSV)</b> untuk arsip, majukan tanggal <b>Rekon mingguan terakhir</b> ke tanggal akhir file, lalu <b>catat tanggal itu di catatan bersama</b> supaya rekan yang lain tahu.</li>
 </ol></div>
 
 <div class="card"><h2>Salah centang?</h2>
@@ -56,7 +56,8 @@ table{border-collapse:collapse;width:100%;font-size:14px}td{border-top:1px solid
 
 <div class="card alert"><h2>Aturan penting</h2>
 <ul>
-<li><b>Satu rekening, satu PIC per minggu.</b> Ingatan asisten (tanggal rekon terakhir, mutasi yang sudah dipakai) tersimpan di browser laptop masing-masing, tidak dibagi antar laptop.</li>
+<li><b>Satu rekening diselesaikan dalam satu sesi oleh satu orang.</b> Jangan dua orang membuka rekening yang sama bersamaan. Ingatan asisten (tanggal rekon terakhir, mutasi yang sudah dipakai) hanya tersimpan di laptop yang dipakai.</li>
+<li><b>Setelah selesai, catat di catatan bersama</b> (mis. Google Sheet "Status Rekon"): rekening, <b>rekon s.d. tanggal</b>, nama. Siapa pun yang merekon rekening itu berikutnya mengunduh mutasi <b>mulai hari setelah tanggal itu</b>, dan mengisi tanggal yang sama di kolom "Rekon mingguan terakhir s.d." di panel.</li>
 <li><b>Jangan memetakan rekening ke SmartLink e-Banking.</b> Kalau dipetakan, tombol "Ada di Rekening Koran" di Accurate berubah dan asisten tidak bisa membantu.</li>
 <li><b>Jangan mencentang manual sebagian lalu menjalankan asisten</b> untuk hari yang sama: mutasi untuk jurnal yang sudah dicentang akan terbaca "hanya di bank".</li>
 <li>Kalau asisten <b>berhenti</b> dengan pesan merah, jangan dipaksa. Periksa kartunya, klik <b>Baca ulang Accurate</b>, atau laporkan ke penanggung jawab asisten dengan tombol <b>Salin hasil</b>.</li>
