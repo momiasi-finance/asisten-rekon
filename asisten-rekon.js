@@ -13,7 +13,7 @@
 (() => {
 'use strict';
 if (window.__AR_ON__) { const b0 = document.getElementById('ar-launch'); if (b0) b0.click(); return; }
-const VERSION = '1.1.4';
+const VERSION = '1.1.5';
 const DAY = 86400000;
 const MONTHS = {jan:1,feb:2,peb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,ags:8,aug:8,sep:9,okt:10,oct:10,nov:11,nop:11,des:12,dec:12};
 const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -190,10 +190,29 @@ function parseBank(rows, defYear){
 /* ---------- pencocokan ---------- */
 const STOP = /^(TRSF|E-BANKING|BANKING|BANK|PEMBAYARAN|PENERIMAAN|BAYAR|TRANSFER|SETORAN|DARI|UNTUK|KEPADA|FTSCY|SWITCHING|KLIRING|JURNAL|UMUM|UTANG|PIUTANG|BEBAN|BIAYA|ADMIN|ADMINISTRASI|PAYMENT|FULL|CAMPAIGN|MARKETING|LAINNYA|INFLUENCER|INDONESIA|TRANSAKSI|ONLINE|JANUARI|FEBRUARI|MARET|APRIL|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|PELUNASAN|\d{1,4})$/;
 function tokens(s){ return (String(s).toUpperCase().match(/[A-Z0-9][A-Z0-9\-]{3,}/g) || []).filter(t => !STOP.test(t)); }
+// Berita transfer = keterangan mutasi tanpa kode teknis bank (jenis transaksi, kode cabang/terminal,
+// nomor referensi, nominal). Contoh: "TRSF E-BANKING DB - 2610/FTSCY/WS95321 BCA2610261435 DP Ranis" -> "DP RANIS".
+function berita(desc){
+  return String(desc || '').toUpperCase()
+    .replace(/^(TRSF E-BANKING|BI-FAST|SWITCHING|KR OTOMATIS|BYR VIA E-BANKING|FLAZZ BCA|KARTU KREDIT|TRF|TRANSFER)\s*(DB|CR)?\s*-?\s*/, '')
+    .replace(/\b\d{4}\/[A-Z]{5}\/[A-Z]{2}\d{5}\b/g, ' ')
+    .replace(/\bBCA\d{8,}\b/g, ' ')
+    .replace(/\bBIF (TRANSFER|BIAYA TXN) (KE|DR)\b|\bMBB\b|\/KPO BCA\b/g, ' ')
+    .replace(/\b\d+([.,]\d+)*\b/g, ' ')
+    .replace(/[-\/:]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// Nama perusahaan di mutasi yang sebenarnya merek marketplace.
+const ALIAS = {ECART:'LAZADA', SHOPEEPAY:'SHOPEE', AIRPAY:'SHOPEE', TOKOPEDIA:'TOKOPEDIA', TIKTOK:'TIKTOK'};
+// Berita "berisi" kalau ada kata yang bisa dibandingkan. Pembayaran Virtual Account (FTFVA) tidak membawa berita.
+function informative(b){
+  if (/\/FTFVA\//i.test(b.desc)) return false;
+  return tokens(berita(b.desc)).some(t => /[A-Z]{4,}/.test(t));
+}
 // Nama dicocokkan per kata utuh ("BANK" tidak cocok dengan "E-BANKING"); kata panjang boleh terpotong
 // (bank sering memotong nama: "MAHARD" = "MAHARDIKA").
 function nameScore(bank, book){
-  const full = String(bank.desc + ' ' + bank.ref).toUpperCase();
+  let full = String(bank.desc + ' ' + bank.ref).toUpperCase();
+  for (const k in ALIAS) if (full.includes(k)) full += ' ' + ALIAS[k];
   const bw = full.match(/[A-Z0-9]+/g) || [];
   let n = 0;
   for (const t of new Set(tokens(book.desc + ' ' + book.ref)))
@@ -259,7 +278,8 @@ function classify(bank, book, cutoff){
     if (p.b.bundle) {
       if (unique && p.ns) pasti.push({b:p.b.bundle, k:[p.k], why:'Transfer + biaya BI-FAST ke penerima yang sama'});
       else saran.push({b:p.b.bundle, k:[p.k], why:'Transfer + biaya BI-FAST ke penerima yang sama' + (p.ns ? ' · nama mirip' : '')});
-    } else if (unique) pasti.push({b:[p.b], k:[p.k], why:'Nominal & tanggal cocok'});
+    } else if (unique && (p.ns || !informative(p.b))) pasti.push({b:[p.b], k:[p.k], why: p.ns ? 'Nominal, tanggal & berita cocok' : 'Nominal & tanggal cocok (mutasi tanpa berita)'});
+    else if (unique) saran.push({b:[p.b], k:[p.k], why:'Nominal sama, tapi berita transfer berbeda dengan keterangan jurnal'});
     else saran.push({b:[p.b], k:[p.k], why:'Ada nominal kembar di sekitar tanggal ini' + (p.ns ? ' · nama mirip' : ' · pastikan pasangannya')});
   }
   const left = () => [cands.filter(free), book.filter(x => !used.has(x.id))];
@@ -452,11 +472,14 @@ function mark(){
   clearMarks(); if (!result) return;
   // Ditandai di kotak luar (kartu + baris no. bukti) supaya bingkai dan label tidak terpotong.
   const tag = (k, cls, text) => { const t = target(k); t.classList.add(cls); t.setAttribute('data-ar', text); };
-  result.pasti.forEach(g => g.k.forEach(k => tag(k, 'ar-ok', `✓ PASTI · bank ${fd(g.b[0].date)}`)));
+  result.pasti.forEach(g => g.k.forEach(k => tag(k, 'ar-ok', `✓ PASTI · bank ${fd(g.b[0].date)} · ${shortB(g.b[0]).slice(0, 40)}`)));
   result.saran.forEach(g => g.k.forEach(k => tag(k, 'ar-sr', `? CEK · ${g.why}`)));
   result.bookOnly.forEach(k => tag(k, 'ar-no', '✕ BELUM DI BANK'));
 }
 const target = k => (k.box && k.box.isConnected ? k.box : k.card);
+// Baris mutasi bank di panel: berita transfer ditonjolkan, keterangan lengkap muncul saat mouse diarahkan.
+const shortB = b => { const t = berita(b.desc); return t || b.desc; };
+const bankLine = b => `<div class="rl" title="${esc(b.desc)}"><span>Bank ${fd(b.date)} · <b>${esc(shortB(b).slice(0, 70))}</b>${/\/FTFVA\//i.test(b.desc) ? ' <small>(VA, tanpa berita)</small>' : ''}</span><span class="n">${fmt(b.amt)}</span></div>`;
 // Gulir ke kartu di daftar Accurate dan buat berkedip.
 function goTo(k){
   if (!k) return;
@@ -523,13 +546,13 @@ function render(){
       ${r.bankOld.length ? `<div class="note">${r.bankOld.length} mutasi s.d. ${esc(getCut())} tidak punya pasangan di layar dan dianggap <b>sudah direkon sebelumnya</b>, jadi tidak dihitung.</div>`
         : (!getCut() && r.bankOnly.length > 30 ? `<div class="note warn">Banyak mutasi "hanya bank". Kalau tim sudah rekon mingguan, isi tanggal <b>Rekon mingguan terakhir s.d.</b> di atas.</div>` : '')}`;
     const item = (g, i, kind) => `<div class="it" data-go="${kind}:${i}"><small>${esc(g.why)}</small>
-      ${g.b.map(b => `<div class="rl"><span>Bank ${fd(b.date)} · ${esc(b.desc.slice(0, 48))}</span><span class="n">${fmt(b.amt)}</span></div>`).join('')}
+      ${g.b.map(bankLine).join('')}
       ${g.k.map(k => `<div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div>`).join('')}</div>`;
     if (r.pasti.length) body += `<div><h4>Siap dicentang · pasti (${r.pasti.length})</h4>
       <div class="note">Klik <b>Centang</b>, lalu klik sekali lagi untuk yakin. Klik pertama di sesi ini memunculkan konfirmasi dari Accurate: pilih Ya/OK di sana.</div>
       ${r.pasti.map((g, i) => { const k = g.k[0], live = !busy && !halted;
         return `<div class="it" data-go="p:${i}" title="Klik untuk menampilkan kartunya di Accurate"><small>${esc(g.why)} · klik untuk lihat kartu</small>
-        ${g.b.map(b => `<div class="rl"><span>Bank ${fd(b.date)} · ${esc(b.desc.slice(0, 48))}</span><span class="n">${fmt(b.amt)}</span></div>`).join('')}
+        ${g.b.map(bankLine).join('')}
         <div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div>
         <div class="row" style="justify-content:flex-end;margin-top:4px">${k.btn ? `<button data-tick="${i}" ${live ? '' : 'disabled'} style="${live ? '' : 'opacity:.5'}">${armed === i ? `Yakin centang ${esc(k.ref || '')} ${fmt(k.amt)}?` : (busy ? 'Menunggu Accurate…' : 'Centang di Accurate')}</button>` : '<small class="warn">Tombol Accurate tidak ditemukan untuk kartu ini</small>'}</div></div>`; }).join('')}</div>`;
     if (sessionLog.length) body += `<div><h4>Sudah dicentang sesi ini (${sessionLog.filter(e => !e.batal).length})</h4>${sessionLog.map(e => e.batal
@@ -538,7 +561,7 @@ function render(){
       <div class="note" style="margin-top:6px">Salah centang? Buka Kas &amp; Bank → <b>Histori Bank</b>, cari no. bukti di atas, klik tanda ✓ di kolom # untuk membatalkan. Saat kembali ke sini, asisten mendeteksi pembatalannya sendiri.</div></div>`;
     if (r.saran.length) body += `<div><h4>Saran untuk dicek (${r.saran.length})</h4>${r.saran.map((g, i) => item(g, i, 's')).join('')}</div>`;
     if (r.bookOnly.length) body += `<div><h4>Belum ada di mutasi bank (${r.bookOnly.length}): biarkan</h4>${r.bookOnly.map((k, i) => `<div class="it" data-go="n:${i}" title="Klik untuk menampilkan kartunya di Accurate"><div class="rl"><span>Accurate ${fd(k.date)} · ${esc(k.ref || k.desc.slice(0, 40))}</span><span class="n">${fmt(k.amt)}</span></div></div>`).join('')}</div>`;
-    if (r.bankOnly.length) body += `<div><h4>Hanya di mutasi bank (${r.bankOnly.length}): perlu jurnal di Accurate</h4>${r.bankOnly.map(b => `<div class="it"><div class="rl"><span>${fd(b.date)} · ${esc(b.desc.slice(0, 50))}</span><span class="n">${fmt(b.amt)}</span></div><small>Usulan: ${esc(guessCat(b))}</small></div>`).join('')}</div>`;
+    if (r.bankOnly.length) body += `<div><h4>Hanya di mutasi bank (${r.bankOnly.length}): perlu jurnal di Accurate</h4>${r.bankOnly.map(b => `<div class="it">${bankLine(b)}<small>Usulan: ${esc(guessCat(b))}</small></div>`).join('')}</div>`;
     if (bankData.close != null && a.saldo != null) {
       const adjB = bankData.close + sum(r.bookOnly), adjK = a.saldo + sum(r.bankOnly), diff = adjB - adjK;
       body += `<div><h4>Rekonsiliasi (dengan asumsi semua saran benar)</h4>
@@ -605,7 +628,7 @@ function copyResult(){
   if (halted) L.push('--- BERHENTI: ' + halted);
   L.push(`Kartu ${a.recs.length}/${a.pending} · saldo buku ${fmt(a.saldo)} · saldo bank ${fmt(bankData.open)} -> ${fmt(bankData.close)} · no rek file ${bankData.acctNo}`);
   L.push(`PASTI ${r.pasti.length} · SARAN ${r.saran.length} · HANYA BANK ${r.bankOnly.length} · HANYA ACCURATE ${r.bookOnly.length} · SUDAH DIREKON SEBELUMNYA ${r.bankOld.length} (s.d. ${getCut() || '-'})`);
-  const g = x => x.b.map(b => `  B ${fd(b.date)} ${fmt(b.amt)} ${b.desc.slice(0, 60)}`).concat(x.k.map(k => `  A ${fd(k.date)} ${fmt(k.amt)} ${k.ref} ${k.desc.slice(0, 50)}`)).join('\n');
+  const g = x => x.b.map(b => `  B ${fd(b.date)} ${fmt(b.amt)} ${b.desc.slice(0, 60)} | berita: ${berita(b.desc).slice(0, 60)}`).concat(x.k.map(k => `  A ${fd(k.date)} ${fmt(k.amt)} ${k.ref} ${k.desc.slice(0, 50)}`)).join('\n');
   L.push('--- SARAN'); r.saran.forEach(x => L.push('* ' + x.why + '\n' + g(x)));
   L.push('--- HANYA BANK'); r.bankOnly.forEach(b => L.push(`  ${fd(b.date)} ${fmt(b.amt)} ${b.desc.slice(0, 60)}`));
   L.push('--- HANYA ACCURATE'); r.bookOnly.forEach(k => L.push(`  ${fd(k.date)} ${fmt(k.amt)} ${k.ref} ${k.desc.slice(0, 50)}`));
